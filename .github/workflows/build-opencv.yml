@@ -1,0 +1,50 @@
+name: Build OpenCV Slim for ARM64
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: debian:trixie
+      options: --user root
+    timeout-minutes: 180
+
+    steps:
+      - name: Install checkout prerequisites
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build OpenCV
+        run: bash build-opencv.sh
+        env:
+          DEBIAN_FRONTEND: noninteractive
+          OUTPUT_DIR: ${{ github.workspace }}/output
+
+      - name: List built packages
+        if: always()
+        run: ls -lh "${{ github.workspace }}/output/" 2>/dev/null || echo "No output directory"
+
+      - name: Upload .deb packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencv-slim-arm64-debs
+          path: ${{ github.workspace }}/output/*.deb
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Upload build info
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opencv-slim-arm64-buildinfo
+          path: ${{ github.workspace }}/output/build-info.txt
+          retention-days: 90
+          if-no-files-found: warn
