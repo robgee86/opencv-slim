@@ -150,6 +150,34 @@ grep -q '\-DWITH_VTK=OFF' "$RULES_FILE" || { echo "FATAL: VTK not set to OFF"; e
 grep -q '\-DWITH_GSTREAMER=ON' "$RULES_FILE" || { echo "FATAL: GSTREAMER not ON"; exit 1; }
 echo "All patches verified."
 
+# Override dh_install to skip .install entries for libraries that weren't
+# produced (cascading effect of disabled modules like DNN, VTK).
+# Each .install file is filtered against what actually exists in debian/tmp.
+if ! grep -q '^override_dh_install:' "$RULES_FILE"; then
+    cat >> "$RULES_FILE" << 'INSTALL_OVERRIDE'
+
+# Filter .install files to drop entries for unbuilt modules
+override_dh_install:
+	@for f in debian/*.install; do \
+		[ -f "$$f" ] || continue; \
+		mv "$$f" "$$f.orig"; \
+		while IFS= read -r line; do \
+			pat=$$(echo "$$line" | awk '{print $$1}'); \
+			if [ -z "$$pat" ] || ls debian/tmp/$$pat >/dev/null 2>&1; then \
+				echo "$$line"; \
+			else \
+				echo "  Skipped (not built): $$pat" >&2; \
+			fi; \
+		done < "$$f.orig" > "$$f"; \
+		rm "$$f.orig"; \
+	done
+	dh_install
+INSTALL_OVERRIDE
+    echo "Added override_dh_install to handle disabled modules"
+else
+    echo "override_dh_install already exists, skipping"
+fi
+
 # ----------------------------------------------------------
 # Step 7: Patch debian/control
 # ----------------------------------------------------------
