@@ -117,9 +117,11 @@ echo ""
 # Step 7: Patch debian/control (GStreamer Recommends)
 # ----------------------------------------------------------
 echo "=== Patching debian/control ==="
-if grep -q 'Package: libopencv-videoio' debian/control; then
-    sed -i '/^Package: libopencv-videoio[0-9]*/,/^$/{
-        /^Depends:/a Recommends: gstreamer1.0-plugins-good, gstreamer1.0-plugins-bad
+# Insert Recommends before Description in the runtime videoio package only.
+# Must use [0-9]\+ (one-or-more) and $ anchor to avoid matching -dev package.
+if grep -q '^Package: libopencv-videoio[0-9]' debian/control; then
+    sed -i '/^Package: libopencv-videoio[0-9]\+$/,/^$/{
+        /^Description:/i Recommends: gstreamer1.0-plugins-good, gstreamer1.0-plugins-bad
     }' debian/control
     echo "Added GStreamer plugin Recommends to videoio package"
 fi
