@@ -1,0 +1,67 @@
+Description: OpenCV Slim build for ARM64 with GStreamer
+ - Disable FFMPEG (replaced by GStreamer as primary video I/O backend)
+ - Enable Carotene HAL (ARM NEON hand-optimized image primitives)
+ - Disable VTK (heavy dependency, not needed)
+ - Disable DNN module (using external inference framework)
+ - Add override_dh_install to handle missing .install entries
+   from disabled modules
+--- a/debian/rules
++++ b/debian/rules
+@@ -62,8 +62,8 @@
+ 	-DBUILD_INFO_SKIP_TIMESTAMP=ON \
+ 	-DBUILD_PROTOBUF=OFF \
+ 	-DBUILD_PERF_TESTS=OFF \
+-	-DBUILD_opencv_dnn=ON \
+-	-DBUILD_opencv_dnn_modern=ON \
++	-DBUILD_opencv_dnn=OFF \
++	-DBUILD_opencv_dnn_modern=OFF \
+ 	-DBUILD_opencv_face=ON \
+ 	-DBUILD_opencv_python2=OFF \
+ 	-DBUILD_opencv_python3=OFF \
+@@ -87,10 +87,10 @@
+ 	-DOpenGL_GL_PREFERENCE=GLVND \
+ 	-DPROTOBUF_UPDATE_FILES=ON \
+ 	-DWITH_ADE=OFF \
+-	-DWITH_CAROTENE=OFF \
++	-DWITH_CAROTENE=ON \
+ 	-DWITH_CUDA=OFF \
+ 	-DWITH_EIGEN=ON \
+-	-DWITH_FFMPEG=ON \
++	-DWITH_FFMPEG=OFF \
+         -DWITH_FLATBUFFERS=OFF \
+ 	-DWITH_GDAL=ON \
+ 	-DWITH_GDCM=ON \
+@@ -113,7 +113,7 @@
+ 	-DWITH_QUIRC=ON \
+ 	-DWITH_TIFF=ON	\
+ 	-DWITH_UNICAP=OFF \
+-	-DWITH_VTK=ON \
++	-DWITH_VTK=OFF \
+ 	-DWITH_XINE=OFF	\
+ 	$(CMAKE_ARCH_FLAGS)
+
+@@ -205,6 +205,24 @@
+ 	-find debian/tmp -type d -empty -delete
+ 	-$(RM) -r $(BUILDDIR)-static
+
++# Filter .install files to drop entries for libraries not produced
++# by the build (cascading effect of disabled modules like DNN, VTK).
++override_dh_install:
++	@for f in debian/*.install; do \
++		[ -f "$$f" ] || continue; \
++		mv "$$f" "$$f.orig"; \
++		while IFS= read -r line; do \
++			pat=$$(echo "$$line" | awk '{print $$1}'); \
++			if [ -z "$$pat" ] || ls debian/tmp/$$pat >/dev/null 2>&1; then \
++				echo "$$line"; \
++			else \
++				echo "  Skipped (not built): $$pat" >&2; \
++			fi; \
++		done < "$$f.orig" > "$$f"; \
++		rm "$$f.orig"; \
++	done
++	dh_install
++
+ execute_before_dh_strip_nondeterminism-indep:
+ 	# This can be deleted after https://github.com/doxygen/doxygen/pull/9227 is
+ 	# in the version of Doxygen in Debian. It won't hurt afterwards, because

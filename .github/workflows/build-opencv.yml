@@ -27,6 +27,7 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
           OUTPUT_DIR: ${{ github.workspace }}/output
+          PATCH_FILE: ${{ github.workspace }}/debian-slim.patch
 
       - name: List built packages
         if: always()
