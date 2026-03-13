@@ -1,0 +1,46 @@
+name: Build OpenCV Python Wheels
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build-wheels:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: debian:trixie
+      options: --user root
+    timeout-minutes: 180
+
+    steps:
+      - name: Install prerequisites
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates python3 python3-pip python3-wheel sudo
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install GStreamer dependencies
+        run: |
+          apt-get update
+          apt-get install -y libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good
+
+      - name: Clone opencv-python repo
+        run: |
+          git clone --recursive https://github.com/opencv/opencv-python.git
+
+      - name: Build OpenCV Python wheels
+        run: |
+          cd opencv-python
+          export ENABLE_CONTRIB=1
+          export ENABLE_HEADLESS=1
+          export CMAKE_ARGS="-DWITH_GSTREAMER=ON -DWITH_GTK=OFF -DWITH_QT=OFF -DWITH_CUDA=OFF -DBUILD_opencv_java=OFF -DBUILD_opencv_python3=ON -DWITH_CAROTENE=ON -DWITH_VTK=OFF -DWITH_FFMPEG=OFF -DBUILD_opencv_dnn=OFF -DBUILD_opencv_dnn_modern=OFF"
+          pip3 wheel . --verbose
+
+      - name: Upload wheel files
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencv-python-wheels
+          path: opencv-python/*.whl
