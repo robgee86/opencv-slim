@@ -37,7 +37,8 @@ apt-get install -y --no-install-recommends \
     dpkg-dev \
     devscripts \
     fakeroot \
-    equivs
+    equivs \
+    wget
 
 # ----------------------------------------------------------
 # Step 3: Fetch OpenCV source package
@@ -57,13 +58,40 @@ fi
 echo "Source directory: $SRCDIR"
 
 # ----------------------------------------------------------
-# Step 4: Install build dependencies
+# Step 4: Restore carotene HAL (stripped from the +dfsg tarball)
+# ----------------------------------------------------------
+echo "=== Restoring carotene from upstream ==="
+# Extract the OpenCV version from the source directory name (e.g. "4.10.0")
+OPENCV_VERSION=$(basename "$SRCDIR" | sed 's/opencv-\([0-9.]*\).*/\1/')
+echo "OpenCV version: $OPENCV_VERSION"
+
+UPSTREAM_URL="https://github.com/opencv/opencv/archive/refs/tags/${OPENCV_VERSION}.tar.gz"
+echo "Fetching $UPSTREAM_URL ..."
+wget -q -O /tmp/opencv-upstream.tar.gz "$UPSTREAM_URL"
+
+# Extract only the 3rdparty/carotene directory into the source tree
+tar xzf /tmp/opencv-upstream.tar.gz \
+    -C "$SRCDIR" \
+    --strip-components=1 \
+    "opencv-${OPENCV_VERSION}/3rdparty/carotene"
+
+rm /tmp/opencv-upstream.tar.gz
+
+if [ -d "$SRCDIR/3rdparty/carotene/hal" ]; then
+    echo "Carotene HAL restored successfully"
+else
+    echo "FATAL: carotene/hal directory not found after extraction"
+    exit 1
+fi
+
+# ----------------------------------------------------------
+# Step 5: Install build dependencies
 # ----------------------------------------------------------
 echo "=== Installing build dependencies ==="
 apt-get build-dep -y "$OPENCV_SOURCE_PKG"
 
 # ----------------------------------------------------------
-# Step 5: Patch debian/rules — modify CMAKE_FLAGS
+# Step 6: Patch debian/rules — modify CMAKE_FLAGS
 # ----------------------------------------------------------
 echo "=== Patching debian/rules ==="
 cd "$SRCDIR"
@@ -107,7 +135,7 @@ grep -q '\-DWITH_GSTREAMER=ON' "$RULES_FILE" || { echo "FATAL: GSTREAMER not ON"
 echo "All patches verified."
 
 # ----------------------------------------------------------
-# Step 6: Patch debian/control
+# Step 7: Patch debian/control
 # ----------------------------------------------------------
 echo "=== Patching debian/control ==="
 
@@ -132,7 +160,7 @@ echo "--- python3-opencv Depends (auto-detected, headless) ---"
 sed -n '/^Package: python3-opencv$/,/^$/{/^Depends:/p}' "$CONTROL_FILE"
 
 # ----------------------------------------------------------
-# Step 7: Update changelog
+# Step 8: Update changelog
 # ----------------------------------------------------------
 echo "=== Updating changelog ==="
 export DEBEMAIL="opencv-slim@localhost"
@@ -143,7 +171,7 @@ head -5 debian/changelog
 echo ""
 
 # ----------------------------------------------------------
-# Step 8: Build binary packages
+# Step 9: Build binary packages
 # ----------------------------------------------------------
 echo "=== Starting build ==="
 export DEB_BUILD_OPTIONS="nocheck parallel=$(nproc)"
@@ -155,7 +183,7 @@ dpkg-buildpackage -us -uc -b
 echo "Build finished at: $(date -u)"
 
 # ----------------------------------------------------------
-# Step 9: Collect output
+# Step 10: Collect output
 # ----------------------------------------------------------
 echo "=== Collecting build artifacts ==="
 cp /build/*.deb "$OUTPUT_DIR/" 2>/dev/null || true
