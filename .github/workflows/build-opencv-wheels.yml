@@ -34,7 +34,7 @@ jobs:
       - name: Build OpenCV Python wheels
         run: |
           cd opencv-python
-          export ENABLE_CONTRIB=1
+          export ENABLE_CONTRIB=0
           export ENABLE_HEADLESS=1
           export CMAKE_ARGS="-DWITH_GSTREAMER=ON -DWITH_GTK=OFF -DWITH_QT=OFF -DWITH_CUDA=OFF -DBUILD_opencv_java=OFF -DBUILD_opencv_python3=ON -DWITH_CAROTENE=ON -DWITH_VTK=OFF -DWITH_FFMPEG=OFF -DBUILD_opencv_dnn=OFF -DBUILD_opencv_dnn_modern=OFF"
           pip3 wheel . --verbose
