@@ -69,13 +69,29 @@ UPSTREAM_URL="https://github.com/opencv/opencv/archive/refs/tags/${OPENCV_VERSIO
 echo "Fetching $UPSTREAM_URL ..."
 wget -q -O /tmp/opencv-upstream.tar.gz "$UPSTREAM_URL"
 
-# Extract only the 3rdparty/carotene directory into the source tree
+# Extract carotene to a temp location first
+mkdir -p /tmp/carotene-src
 tar xzf /tmp/opencv-upstream.tar.gz \
-    -C "$SRCDIR" \
+    -C /tmp/carotene-src \
     --strip-components=1 \
     "opencv-${OPENCV_VERSION}/3rdparty/carotene"
 
 rm /tmp/opencv-upstream.tar.gz
+
+# debian/rules copies debian/3rdparty-<ver> → 3rdparty/ during configure,
+# overwriting anything we put directly in 3rdparty/. So we must inject
+# carotene into Debian's staging directory to survive that copy.
+for staging_dir in "$SRCDIR"/debian/3rdparty-*; do
+    if [ -d "$staging_dir" ]; then
+        cp -a /tmp/carotene-src/3rdparty/carotene "$staging_dir/carotene"
+        echo "Injected carotene into $(basename "$staging_dir")"
+    fi
+done
+
+# Also place it directly in 3rdparty/ in case the staging copy doesn't happen
+mkdir -p "$SRCDIR/3rdparty"
+cp -a /tmp/carotene-src/3rdparty/carotene "$SRCDIR/3rdparty/carotene"
+rm -rf /tmp/carotene-src
 
 if [ -d "$SRCDIR/3rdparty/carotene/hal" ]; then
     echo "Carotene HAL restored successfully"
