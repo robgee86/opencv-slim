@@ -32,7 +32,7 @@ jobs:
 
       - name: Install Media I/O dependencies
         run: |
-          apt-get install -y --no-install-recommends libjpeg62-turbo-dev libpng-dev libtiff-dev libwebp-dev libavif-dev libopenblas-dev
+          apt-get install -y --no-install-recommends libjpeg62-turbo-dev libpng-dev libtiff-dev libwebp-dev libavif-dev libopenblas-dev liblapacke-dev
 
       - name: Install GStreamer dependencies
         run: |
