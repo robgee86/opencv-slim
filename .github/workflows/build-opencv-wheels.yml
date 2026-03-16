@@ -14,13 +14,13 @@ jobs:
     timeout-minutes: 180
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Install prerequisites
         run: |
           apt-get update
           apt-get install -y --no-install-recommends git ca-certificates build-essential pkg-config
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
       - name: Install Python
         run: |
