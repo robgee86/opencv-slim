@@ -1,0 +1,12 @@
+services:
+  opencv-app:
+    build: .
+    container_name: opencv-app
+    volumes:
+      - "/dev:/dev"
+      - "/sys:/sys"
+      - /run/udev:/run/udev:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: ["python3", "main.py"]
+    user: root
